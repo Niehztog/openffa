@@ -773,8 +773,11 @@ void ionripper_sparks (edict_t *self)
 // RAFAEL
 void ionripper_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t *surf)
 {
-    if (other == self->owner)
+    if (other == self->owner && (!ripper_self->value))
         return;
+
+    if (ripper_self->value)
+        self->owner = self; // Nick - new ripper
 
     if (surf && (surf->flags & SURF_SKY))
     {
@@ -785,10 +788,21 @@ void ionripper_touch (edict_t *self, edict_t *other, cplane_t *plane, csurface_t
     /*if (self->owner->client)
         PlayerNoise (self->owner, self->s.origin, PNOISE_IMPACT);*/
 
-    if (other->takedamage)
+    if (other->takedamage && other != self->obitowner)
     {
         G_BeginDamage();
-        T_Damage (other, self, self->owner, self->velocity, self->s.origin, plane->normal, self->dmg, 1, DAMAGE_ENERGY, MOD_RIPPER);
+        T_Damage (other, self, self->obitowner, self->velocity, self->s.origin, plane->normal, self->dmg, 1, DAMAGE_ENERGY, MOD_RIPPER);
+        G_EndDamage();
+    }
+    else if (other->takedamage && other == self->obitowner && ripper_self->value)
+    {
+        if (self->dmg < 40) { // Leave it be if quad
+
+            self->dmg = ripper_self->value;
+        }
+
+        G_BeginDamage();
+        T_Damage (other, self, self->obitowner, self->velocity, self->s.origin, plane->normal, self->dmg, 1, DAMAGE_ENERGY, MOD_RIPPERSELF);
         G_EndDamage();
     }
     else
@@ -826,6 +840,7 @@ void fire_ionripper (edict_t *self, vec3_t start, vec3_t dir, int damage, int sp
     ion->s.modelindex = gi.modelindex ("models/objects/boomrang/tris.md2");
     ion->s.sound = gi.soundindex ("misc/lasfly.wav");
     ion->owner = self;
+    ion->obitowner = self; // Nick - new ripper
     ion->touch = ionripper_touch;
     ion->nextthink = level.framenum + 3 * HZ;
     ion->think = ionripper_sparks;
@@ -877,7 +892,7 @@ void plasma_touch (edict_t *ent, edict_t *other, cplane_t *plane, csurface_t *su
         T_Damage (other, ent, ent->owner, ent->velocity, ent->s.origin, plane->normal, ent->dmg, 0, 0, MOD_PHALANX);
     }
 
-    T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius, MOD_PHALANX);
+    T_RadiusDamage(ent, ent->owner, ent->radius_dmg, other, ent->dmg_radius, MOD_P_SPLASH);
     G_EndDamage();
 
     gi.WriteByte (svc_temp_entity);

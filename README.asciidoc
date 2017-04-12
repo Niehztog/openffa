@@ -17,6 +17,19 @@ ToDo:
 - properly handle quadfire item in quad-chasecam mode
 - implement weapon statistics for the new xatrix weapons
 
+New Xatrix CVAR's
+-----------------
+
+ripper_self 0/xx (default 0)::
+
+    The default is 0 - the gun performs as normal.
+    If the CVAR ripper_self is non-zero, then the ion ripper will cause self damage by that
+    amount.
+    The value is the health it will take i.e. ripper_self 10 will cause 10 health damage
+    if you get hit by your own 'ion's.  The usual damage caused by this weapon in DM is 30.
+    I found this too much for self damage - ripper_self 10 is a good value.  NOTE - if the
+    player has quad damage then the full damage will occur no matter who you hit
+
 
 OpenFFA Manual
 ==============
@@ -285,4 +298,3 @@ flood_perinfo::
 flood_infodelay::
     Time, in seconds, for name or skin changes to be disabled once flood
     protection is triggered. Default value is 60.
-

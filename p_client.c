@@ -323,6 +323,22 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
                     break;
             }
             break;
+        case MOD_RIPPERSELF:
+            message = "shouldn't have used the girls' gun";
+            break;
+        case MOD_P_SPLASH:
+            switch (self->client->pers.gender) {
+                case GENDER_FEMALE:
+                    message = "evaporated herself";
+                    break;
+                case GENDER_MALE:
+                    message = "evaporated himself";
+                    break;
+                default:
+                    message = "evaporated itself";
+                    break;
+            }
+            break;
 #endif //XATRIX
         default:
             switch (self->client->pers.gender) {
@@ -452,6 +468,11 @@ static void ClientObituary(edict_t *self, edict_t *inflictor, edict_t *attacker)
             message = "caught in trap by";
             break;
         // END 14-APR-98
+        case MOD_P_SPLASH:
+            message = "was fried alive by";
+            message2 = "'s Phalanx blast";
+            break;
+
 #endif //XATRIX
         }
         if (message) {

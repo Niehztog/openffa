@@ -96,6 +96,9 @@ cvar_t  *flood_infodelay;
 
 #ifdef XATRIX
 cvar_t	*xatrix;			//set when xatrix mission pack 1 is enabled
+
+// Nick - Ripper self hurt
+cvar_t *ripper_self;
 #endif //XATRIX
 
 LIST_DECL(g_map_list);
@@ -1046,6 +1049,11 @@ static void G_Init(void)
     flood_infos = gi.cvar("flood_infos", "4", 0);
     flood_perinfo = gi.cvar("flood_perinfo", "30", 0);
     flood_infodelay = gi.cvar("flood_infodelay", "60", 0);
+
+    // Nick - Ripper self hurt
+#ifdef XATRIX
+    ripper_self = gi.cvar ("ripper_self", "0", 0);
+#endif //XATRIX
 
     // force deathmatch
     //gi.cvar_set( "coop", "0" ); //atu

@@ -667,7 +667,9 @@ extern  spawn_temp_t    st;
 #define MOD_BLASTOFF			37
 #define MOD_GEKK				38
 #define MOD_TRAP				39
-#define MOD_TOTAL           40
+#define MOD_RIPPERSELF          40 // Ripper suicide
+#define MOD_P_SPLASH            41 // Phalanx proximity kill
+#define MOD_TOTAL               42
 #else
 #define MOD_TOTAL           34
 #endif //XATRIX
@@ -752,6 +754,9 @@ extern  list_t  g_map_queue;
 
 #ifdef XATRIX
 extern	cvar_t	*xatrix;			//set when xatrix mission pack 1 is enables
+
+// Nick - Ripper self hurt
+extern cvar_t *ripper_self;
 #endif //XATRIX
 
 //extern  cvar_t  *sv_features;
@@ -1428,6 +1433,7 @@ struct edict_s {
 #ifdef XATRIX
     // RAFAEL
     int			orders;
+    edict_t		*obitowner; // Nick - new ripper
 #endif //XATRIX
 
     // hack for proper s.old_origin updates
