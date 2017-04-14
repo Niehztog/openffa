@@ -46,7 +46,11 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
                      GMF_WANT_ALL_DISCONNECTS | G_GMF_VARIABLE_FPS)
 
 // the "gameversion" client command will print this plus compile date
+#ifdef XATRIX
+#define GAMEVERSION "xatrix"
+#else
 #define GAMEVERSION "OpenFFA"
+#endif //XATRIX
 
 // protocol bytes that can be directly added to messages
 #define svc_muzzleflash     1
