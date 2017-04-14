@@ -2026,8 +2026,7 @@ const gitem_t   g_itemlist[ITEM_TOTAL] = {
 		0,
 		NULL,
 		AMMO_TRAP,
-/* precache */ "weapons/trapcock.wav weapons/traploop.wav weapons/trapsuck.wav weapons/trapdown.wav"
-// "weapons/hgrent1a.wav weapons/hgrena1b.wav weapons/hgrenc1b.wav weapons/hgrenb1a.wav weapons/hgrenb2a.wav "
+/* precache */ "weapons/trapcock.wav weapons/traploop.wav weapons/trapsuck.wav weapons/trapdown.wav world/airhiss2.wav weapons/railgr1a.wav flyer/flydeth1.wav world/fuseout.wav tank/pain.wav"
 	},
 
 /*QUAKED ammo_magslug (.3 .3 1) (-16 -16 -16) (16 16 16)

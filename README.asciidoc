@@ -12,7 +12,6 @@ Changes:
 ToDo:
 -----
 - testing
-- import features from the quake2plus-tsmod xatrix mod
 - make xatrix entities switchable by a server console variable ("xatrix")
 - properly handle quadfire item in quad-chasecam mode
 - implement weapon statistics for the new xatrix weapons
@@ -30,6 +29,23 @@ ripper_self 0/xx (default 0)::
     I found this too much for self damage - ripper_self 10 is a good value.  NOTE - if the
     player has quad damage then the full damage will occur no matter who you hit
 
+sv_trap_duration (default: 30)::
+    Duration in seconds until a thrown trap expires
+
+sv_trap_health (default: 200)::
+    Traps can now take damage. this CVAR defines the amount of damage it takes until it expplodes
+
+sv_trap_expl_damage (default: 200)::
+    The damage caused by exploding traps
+
+sv_trap_expl_radius (default: 300)::
+    The distance in which players take damage when a trap explodes
+
+sv_trap_held_damage (default: 125)::
+    The amount of damage which accurs when pushing attack button too long
+
+sv_trap_held_radius (default: 165)::
+    The radius in which objects take damage from an exploding trap in a players hand (when pushing attack button too long)
 
 OpenFFA Manual
 ==============

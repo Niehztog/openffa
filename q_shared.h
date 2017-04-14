@@ -874,6 +874,16 @@ typedef struct {
 #define EF_TRACKERTRAIL     0x80000000
 //ROGUE
 
+#ifdef XATRIX
+// Nick - Extra defines
+#define GIB_SM_MEAT_MODEL "models/objects/gibs/sm_meat/tris.md2"
+#define TRAPDOWN_SOUND "weapons/trapdown.wav"
+#define TRAPSUCK_SOUND "weapons/trapsuck.wav"
+#define TRAPLOOP_SOUND "weapons/traploop.wav"
+#define TRAP_MODEL "models/weapons/z_trap/tris.md2"
+// End Nick
+#endif //XATRIX
+
 // entity_state_t->renderfx flags
 #define RF_MINLIGHT         1       // allways have some light (viewmodel)
 #define RF_VIEWERMODEL      2       // don't draw through eyes, only mirrors
@@ -895,6 +905,11 @@ typedef struct {
 #define RF_SHELL_HALF_DAM   0x00020000
 #define RF_USE_DISGUISE     0x00040000
 //ROGUE
+
+#ifdef XATRIX
+// %%quadz
+#define RF_SHELL_MASK		(RF_SHELL_RED|RF_SHELL_GREEN|RF_SHELL_BLUE|RF_SHELL_DOUBLE|RF_SHELL_HALF_DAM)
+#endif //XATRIX
 
 // player_state_t->refdef flags
 #define RDF_UNDERWATER      1       // warp the screen as apropriate

@@ -669,7 +669,10 @@ extern  spawn_temp_t    st;
 #define MOD_TRAP				39
 #define MOD_RIPPERSELF          40 // Ripper suicide
 #define MOD_P_SPLASH            41 // Phalanx proximity kill
-#define MOD_TOTAL               42
+#define MOD_HELD_TRAP		    42
+#define MOD_TRAP_SPLASH		    43
+#define MOD_TRAP_EXPLODE	    44
+#define MOD_TOTAL               45
 #else
 #define MOD_TOTAL           34
 #endif //XATRIX
@@ -757,6 +760,14 @@ extern	cvar_t	*xatrix;			//set when xatrix mission pack 1 is enables
 
 // Nick - Ripper self hurt
 extern cvar_t *ripper_self;
+
+// %%quadz - killable traps, if health > 0
+extern cvar_t *sv_trap_health;
+extern cvar_t *sv_trap_duration;
+extern cvar_t *sv_trap_expl_damage;
+extern cvar_t *sv_trap_expl_radius;
+extern cvar_t *sv_trap_held_damage;
+extern cvar_t *sv_trap_held_radius;
 #endif //XATRIX
 
 //extern  cvar_t  *sv_features;
@@ -1434,6 +1445,7 @@ struct edict_s {
     // RAFAEL
     int			orders;
     edict_t		*obitowner; // Nick - new ripper
+    float		shell_expire_timestamp;  // %%quadz - when temporary color shell expires (currently relates to traps only)
 #endif //XATRIX
 
     // hack for proper s.old_origin updates
@@ -1498,3 +1510,17 @@ qboolean G_OpenDatabase(void);
 void G_CloseDatabase(void);
 #endif
 
+
+// %%quadz - fun with traps:
+#ifdef XATRIX
+#define TRAP_HEIGHT					8
+#define TRAP_BASE_DAMAGE			(sv_trap_expl_damage->value)		// default value of trap explode damage
+#define TRAP_BASE_RADIUS			(sv_trap_expl_radius->value)		// default radius of trap explode damage
+#define TRAP_HELD_DAMAGE			(sv_trap_held_damage->value)
+#define TRAP_HELD_RADIUS			(sv_trap_held_radius->value)
+#define TRAP_DURATION				(sv_trap_duration->value)
+#define TRAP_INITIAL_HEALTH			(sv_trap_health->value)
+#define trap_is_quadded(ent)		((ent)->dmg >= (TRAP_BASE_DAMAGE * 4))
+#define killable_traps_enabled()	(sv_trap_health->value > 0)
+#define trap_has_become_killable(ent)	((ent)->takedamage == DAMAGE_YES)
+#endif //XATRIX

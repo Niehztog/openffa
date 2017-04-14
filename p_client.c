@@ -175,7 +175,12 @@ static const frag_t mod_to_frag[MOD_TOTAL] = {
     FRAG_BRAINTENTACLE,
     FRAG_BLASTOFF,
     FRAG_GEKK,
-    FRAG_TRAP
+    FRAG_TRAP,
+    FRAG_RIPPER,
+    FRAG_PHALANX,
+    FRAG_TRAP,
+    FRAG_TRAP,
+    FRAG_TRAP,
 #endif //XATRIX
 };
 

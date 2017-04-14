@@ -99,6 +99,14 @@ cvar_t	*xatrix;			//set when xatrix mission pack 1 is enabled
 
 // Nick - Ripper self hurt
 cvar_t *ripper_self;
+
+// %%quadz - killable traps
+cvar_t *sv_trap_health;
+cvar_t *sv_trap_duration;
+cvar_t *sv_trap_expl_damage;
+cvar_t *sv_trap_expl_radius;
+cvar_t *sv_trap_held_damage;
+cvar_t *sv_trap_held_radius;
 #endif //XATRIX
 
 LIST_DECL(g_map_list);
@@ -1053,6 +1061,14 @@ static void G_Init(void)
     // Nick - Ripper self hurt
 #ifdef XATRIX
     ripper_self = gi.cvar ("ripper_self", "0", 0);
+
+    // %%quadz - killable traps, if health > 0
+    sv_trap_health = gi.cvar("sv_trap_health", "0", 0);
+    sv_trap_duration = gi.cvar("sv_trap_duration", "30", 0);
+    sv_trap_expl_damage = gi.cvar("sv_trap_expl_damage", "200", 0);
+    sv_trap_expl_radius = gi.cvar("sv_trap_expl_radius", "300", 0);
+    sv_trap_held_damage = gi.cvar("sv_trap_held_damage", "125", 0);
+    sv_trap_held_radius = gi.cvar("sv_trap_held_radius", "165", 0);
 #endif //XATRIX
 
     // force deathmatch

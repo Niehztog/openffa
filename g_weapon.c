@@ -942,8 +942,78 @@ void fire_plasma (edict_t *self, vec3_t start, vec3_t dir, int damage, int speed
 
 }
 
+/* Nick - 29/08/2005
+=================
+fire_trap
+=================
+*/
+static void Trap_Explode (edict_t *ent)
+{
+    vec3_t		origin;
+    int		mod;
+    //int		n;
+
+    ent->owner = ent->obitowner;  // %%quadz
+
+    /*if (ent->owner->client)
+        PlayerNoise(ent->owner, ent->s.origin, PNOISE_IMPACT);*/
+
+    //FIXME: if we are onground then raise our Z just a bit since we are a point?
+    if (ent->enemy) // Nick 28/08/2005 - I don't think this will ever happen with a trap...
+    {
+        float	points;
+        vec3_t	v;
+        vec3_t	dir;
+
+        VectorAdd (ent->enemy->mins, ent->enemy->maxs, v);
+        VectorMA (ent->enemy->s.origin, 0.5, v, v);
+        VectorSubtract (ent->s.origin, v, v);
+        points = ent->dmg - 0.5 * VectorLength (v);
+        VectorSubtract (ent->enemy->s.origin, ent->s.origin, dir);
+        if (ent->spawnflags & 1)
+            mod = MOD_TRAP_EXPLODE;
+        else
+            mod = MOD_TRAP;
+        G_BeginDamage();
+        T_Damage (ent->enemy, ent, ent->owner, dir, ent->s.origin, vec3_origin, (int)points, (int)points, DAMAGE_RADIUS, mod);
+        G_EndDamage();
+    }
+
+    if (ent->spawnflags & 2) // Nick 28/08/2005 - This one does though.
+        mod = MOD_HELD_TRAP;
+    else if (ent->spawnflags & 1)
+        mod = MOD_TRAP_SPLASH;
+    else
+        mod = MOD_TRAP_EXPLODE;
+    G_BeginDamage();
+    T_RadiusDamage(ent, ent->owner, ent->dmg, ent->enemy, ent->dmg_radius, mod);
+    G_EndDamage();
+
+    VectorMA (ent->s.origin, -0.02, ent->velocity, origin);
+    gi.WriteByte (svc_temp_entity);
+    if (ent->waterlevel)
+    {
+        if (ent->groundentity)
+            gi.WriteByte (TE_GRENADE_EXPLOSION_WATER);
+        else
+            gi.WriteByte (TE_ROCKET_EXPLOSION_WATER);
+    }
+    else
+    {
+        if (ent->groundentity)
+            gi.WriteByte (TE_GRENADE_EXPLOSION);
+        else
+            gi.WriteByte (TE_ROCKET_EXPLOSION);
+    }
+    gi.WritePosition (origin);
+    gi.multicast (ent->s.origin, MULTICAST_PHS);
+
+    G_FreeEdict (ent);
+}
+
 // RAFAEL
 extern void SP_item_foodcube (edict_t *best);
+static void convert_trap_to_killable (edict_t *ent);
 // RAFAEL
 static void Trap_Think (edict_t *ent)
 {
@@ -953,12 +1023,31 @@ static void Trap_Think (edict_t *ent)
     int		len, i;
     int		oldlen = 8000;
     vec3_t	forward, right, up;
+    int	was_quadded = trap_is_quadded(ent);  // %%quadz -- add quad trap suction!! O RLY??? YA RLY!!
+    int was_killed = trap_has_become_killable(ent) && (ent->health <= 0);  // %%quadz - killable traps
 
-    if (ent->timestamp < level.time)
+    if (! killable_traps_enabled())
+        was_killed = 0;
+
+    if (ent->shell_expire_timestamp < level.time) {
+        ent->s.effects &= ~EF_COLOR_SHELL;
+        ent->s.renderfx &= ~RF_SHELL_MASK;
+    }
+
+    if ((ent->timestamp < level.time) || was_killed)  // %%quadz - killable traps
     {
+        // %%quadz - if trap killed rather than expired, give damage
+        if (was_killed) {
+            G_BeginDamage();
+            T_RadiusDamage(ent, ent->obitowner, ent->dmg, NULL, ent->dmg_radius, MOD_EXPLOSIVE);
+            G_EndDamage();
+//			gi.sound(ent, CHAN_BODY, gi.soundindex("bosstank/btkdeth1.wav"), 1, ATTN_NORM, 0);
+//			gi.sound(ent, CHAN_BODY, gi.soundindex("hover/hovdeth1.wav"), 1, ATTN_NORM, 0);
+//			gi.sound(ent, CHAN_BODY, gi.soundindex("tank/pain.wav"), 1, ATTN_NORM, 0);
+            gi.sound(ent, CHAN_BODY, gi.soundindex("flyer/flydeth1.wav"), 1, ATTN_NORM, 0);
+            gi.sound(ent, CHAN_VOICE, gi.soundindex("world/fuseout.wav"), 1, ATTN_NORM, 0);
+        }
         BecomeExplosion1(ent);
-        // note to self
-        // cause explosion damage???
         return;
     }
 
@@ -973,7 +1062,9 @@ static void Trap_Think (edict_t *ent)
         if (ent->s.frame == 5)
         {
             if (ent->wait == 64)
-                gi.sound(ent, CHAN_VOICE, gi.soundindex ("weapons/trapdown.wav"), 1, ATTN_IDLE, 0);
+                // Nick - Add defines
+                // gi.sound(ent, CHAN_VOICE, gi.soundindex ("weapons/trapdown.wav"), 1, ATTN_IDLE, 0);
+                gi.sound(ent, CHAN_VOICE, gi.soundindex (TRAPDOWN_SOUND), 1, ATTN_IDLE, 0);
 
             ent->wait -= 2;
             ent->delay += level.time;
@@ -983,25 +1074,34 @@ static void Trap_Think (edict_t *ent)
 
                 best = G_Spawn();
 
-                if (strcmp (ent->enemy->classname, "monster_gekk") == 0)
-                {
-                    best->s.modelindex = gi.modelindex ("models/objects/gekkgib/torso/tris.md2");
-                    best->s.effects |= TE_GREENBLOOD;
-                }
-                else if (ent->mass > 200)
-                {
-                    best->s.modelindex = gi.modelindex ("models/objects/gibs/chest/tris.md2");
-                    best->s.effects |= TE_BLOOD;
-                }
-                else
-                {
-                    best->s.modelindex = gi.modelindex ("models/objects/gibs/sm_meat/tris.md2");
-                    best->s.effects |= TE_BLOOD;
-                }
+                // Nick - not required in DED
+                //if (strcmp (ent->enemy->classname, "monster_gekk") == 0)
+                //{
+                //	best->s.modelindex = gi.modelindex ("models/objects/gekkgib/torso/tris.md2");
+                //	best->s.effects |= TE_GREENBLOOD;
+                //}
+                //else
+                // Player in DED is never > 200
+                //if (ent->mass > 200)
+                //{
+                //best->s.modelindex = gi.modelindex ("models/objects/gibs/chest/tris.md2");
+                //	best->s.modelindex = gi.modelindex (GIB_CHEST_MODEL);
+                //	best->s.effects |= TE_BLOOD;
+                //}
+                //else
+                //{
+                // Add - defines
+                //best->s.modelindex = gi.modelindex ("models/objects/gibs/sm_meat/tris.md2");
+                best->s.modelindex = gi.modelindex (GIB_SM_MEAT_MODEL);
+                best->s.effects |= TE_BLOOD;
+                //}
+                // End Nick
+
 
                 AngleVectors (ent->s.angles, forward, right, up);
 
                 RotatePointAroundVector( vec, up, right, ((360.0/3)* i)+ent->delay);
+
                 VectorMA (vec, ent->wait/2, vec, vec);
                 VectorAdd(vec, ent->s.origin, vec);
                 VectorAdd(vec, forward, best->s.origin);
@@ -1028,6 +1128,7 @@ static void Trap_Think (edict_t *ent)
                 best->nextthink = level.framenum + 0.1 * HZ;
                 best->think = G_FreeEdict;
                 gi.linkentity (best);
+
             }
 
             if (ent->wait < 19)
@@ -1057,9 +1158,15 @@ static void Trap_Think (edict_t *ent)
     if (ent->s.frame >= 4)
     {
         ent->s.effects |= EF_TRAP;
-        VectorClear (ent->mins);
-        VectorClear (ent->maxs);
 
+        // %%quadz - killable traps {
+        // VectorClear (ent->mins);
+        // VectorClear (ent->maxs);
+
+        if (killable_traps_enabled()  &&  !trap_has_become_killable(ent)) {
+            convert_trap_to_killable(ent);
+        }
+        // %%quadz - }
     }
 
     if (ent->s.frame < 4)
@@ -1071,6 +1178,7 @@ static void Trap_Think (edict_t *ent)
             continue;
         if (!(target->svflags & SVF_MONSTER) && !target->client)
             continue;
+        // Nick - These next two lines commented out by Xatrix.
         // if (target == ent->owner)
         //	continue;
         if (target->health <= 0)
@@ -1095,18 +1203,30 @@ static void Trap_Think (edict_t *ent)
     if (best)
     {
         vec3_t	forward;
+        vec3_t	trap_origin;
+
+        // %%quadz - kludge: now that traps have a bbox, so we can
+        // shoot them, if the player is standing on the trap, we fudge
+        // the trap origin upward for the vector length computation,
+        // so it's effectively as it used to be when the player stood
+        // right on the trap.
+        VectorCopy(ent->s.origin, trap_origin);
+        if (best->s.origin[2] > trap_origin[2]) {
+            trap_origin[2] += TRAP_HEIGHT;
+        }
 
         if (best->groundentity)
         {
             best->s.origin[2] += 1;
             best->groundentity = NULL;
         }
-        VectorSubtract (ent->s.origin, best->s.origin, vec);
+        VectorSubtract (trap_origin, best->s.origin, vec);
         len = VectorLength (vec);
         if (best->client)
         {
+            int scalar = was_quadded? 1000 : 250;  // %%quadz -- add quad trap suction!
             VectorNormalize (vec);
-            VectorMA (best->velocity, 250, vec, best->velocity);
+            VectorMA (best->velocity, scalar, vec, best->velocity);
         }
         else
         {
@@ -1116,40 +1236,94 @@ static void Trap_Think (edict_t *ent)
             VectorScale (forward, 256, best->velocity);
         }
 
-        gi.sound(ent, CHAN_VOICE, gi.soundindex ("weapons/trapsuck.wav"), 1, ATTN_IDLE, 0);
+        // Nick - Add defines
+        //gi.sound(ent, CHAN_VOICE, gi.soundindex ("weapons/trapsuck.wav"), 1, ATTN_IDLE, 0);
+        gi.sound(ent, CHAN_VOICE, gi.soundindex (TRAPSUCK_SOUND), 1, ATTN_IDLE, 0);
 
         if (len < 32)
         {
-            if (best->mass < 400)
-            {
-                G_BeginDamage();
-                T_Damage (best, ent, ent->owner, vec3_origin, best->s.origin, vec3_origin, 100000, 1, 0, MOD_TRAP);
-                G_EndDamage();
-                ent->enemy = best;
-                ent->wait = 64;
-                VectorCopy (ent->s.origin, ent->old_origin);
-                ent->timestamp = level.time + 30;
-                //if (deathmatch->value)
-                    ent->mass = best->mass/4;
-                //else
-                //    ent->mass = best->mass/10;
-                // ok spawn the food cube
-                ent->s.frame = 5;
-            }
-            else
-            {
-                BecomeExplosion1(ent);
-                // note to self
-                // cause explosion damage???
-                return;
-            }
-
+            // Nick
+            // Mass doesn't increase in DED
+            //if (best->mass < 400)
+            //{
+            G_BeginDamage();
+            T_Damage (best, ent, ent->obitowner, vec3_origin, best->s.origin, vec3_origin, 100000, 1, 0, MOD_TRAP);
+            G_EndDamage();
+            ent->enemy = best;
+            ent->wait = 64;
+            VectorCopy (ent->s.origin, ent->old_origin);
+            ent->timestamp = level.time + TRAP_DURATION;
+            // Nick - always is on a DED server
+            //if (deathmatch->value)
+            ent->mass = best->mass/4;
+            //else
+            //	ent->mass = best->mass/10;
+            // End Nick
+            // ok spawn the food cube
+            ent->s.frame = 5;
+            //}
+            //else
+            //{
+            //	BecomeExplosion1(ent);
+            // note to self
+            // cause explosion damage???
+            //	return;
+            //}
+            // End Nick
         }
     }
 
 
 }
 
+static void trap_pain (edict_t *self, edict_t *other, float kick, int damage)
+{
+    char *snd;
+
+//	gi.bprintf(PRINT_HIGH, "trap_pain: dmg=%d health=%d\n", damage, self->health);
+
+    self->s.effects |= EF_COLOR_SHELL;
+    self->s.renderfx &= ~RF_SHELL_MASK;
+    if (self->health >= ((TRAP_INITIAL_HEALTH * 2) / 3))
+        self->s.renderfx |= (RF_SHELL_RED|RF_SHELL_GREEN|RF_SHELL_BLUE);
+    else if (self->health >= (TRAP_INITIAL_HEALTH / 3))
+        // self->s.renderfx |= (RF_SHELL_HALF_DAM|RF_SHELL_RED|RF_SHELL_GREEN);
+        self->s.renderfx |= (/*RF_SHELL_HALF_DAM|*/RF_SHELL_DOUBLE|RF_SHELL_RED);
+    else if (self->health >= (TRAP_INITIAL_HEALTH / 10))
+        self->s.renderfx |= (RF_SHELL_HALF_DAM|RF_SHELL_RED);
+    else
+        self->s.renderfx |= RF_SHELL_RED;
+    self->shell_expire_timestamp = level.time + 0.5;
+
+    // snd = "world/spark1.wav";
+    // snd = ((rand() % 1000) >= 500) ? "misc/welder2.wav" : "misc/welder3.wav";
+    // snd = ((rand() % 1000) >= 500) ? "world/airhiss2.wav" : "world/force3.wav";
+
+    if (self->health >= (TRAP_INITIAL_HEALTH / 10))
+        snd = ((rand() % 1000) >= 500) ? "world/airhiss2.wav" : "weapons/railgr1a.wav";
+    else
+        snd = "tank/pain.wav";
+    gi.sound(self, CHAN_BODY, gi.soundindex(snd), 1, ATTN_NORM, 0);
+}
+
+static void trap_die (edict_t *self, edict_t *inflictor, edict_t *attacker, int damage, vec3_t point)
+{
+//	gi.bprintf(PRINT_HIGH, "trap_die: dmg=%d health=%d\n", damage, self->health);
+//	gi.sound(self, CHAN_BODY, gi.soundindex("world/lid.wav"), 1, ATTN_NORM, 0);
+}
+
+
+static void convert_trap_to_killable (edict_t *trap)
+{
+    trap->takedamage = DAMAGE_YES;
+    trap->health = TRAP_INITIAL_HEALTH;
+    trap->pain = trap_pain;
+    trap->die = trap_die;
+    // real owner is kept in obitowner, and so we can
+    // now disassociate the owner so that the owner
+    // can shoot its own traps
+    trap->owner = trap;
+}
 
 // RAFAEL
 void fire_trap (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int speed, float timer, float damage_radius, qboolean held)
@@ -1174,31 +1348,43 @@ void fire_trap (edict_t *self, vec3_t start, vec3_t aimdir, int damage, int spee
 //	VectorClear (trap->mins);
 //	VectorClear (trap->maxs);
     VectorSet (trap->mins, -4, -4, 0);
-    VectorSet (trap->maxs, 4, 4, 8);
-    trap->s.modelindex = gi.modelindex ("models/weapons/z_trap/tris.md2");
+    VectorSet (trap->maxs, 4, 4, TRAP_HEIGHT);
+    // Nick - add define
+    //trap->s.modelindex = gi.modelindex ("models/weapons/z_trap/tris.md2");
+    trap->s.modelindex = gi.modelindex (TRAP_MODEL);
+    trap->takedamage = DAMAGE_NO;
     trap->owner = self;
+    trap->obitowner = self;  // keep track of owner separately so owner can shoot own trap
     trap->nextthink = level.framenum + 1.0 * HZ;
     trap->think = Trap_Think;
     trap->dmg = damage;
     trap->dmg_radius = damage_radius;
     trap->classname = "htrap";
     // RAFAEL 16-APR-98
-    trap->s.sound = gi.soundindex ("weapons/traploop.wav");
+    // Nick - Add define
+    //trap->s.sound = gi.soundindex ("weapons/traploop.wav");
+    trap->s.sound = gi.soundindex (TRAPLOOP_SOUND);
     // END 16-APR-98
     if (held)
         trap->spawnflags = 3;
     else
         trap->spawnflags = 1;
 
-    if (timer <= 0.0)
-        Grenade_Explode (trap);
+    if ((held) && timer <= 0.0) { // If player just died (< 0 health) throw trap not explode it.
+        int was_quadded = trap_is_quadded(trap);
+        trap->dmg = TRAP_HELD_DAMAGE;
+        trap->dmg_radius = TRAP_HELD_RADIUS;
+        if (was_quadded)
+            trap->dmg *= 4;
+        Trap_Explode (trap);
+    }
     else
     {
         // gi.sound (self, CHAN_WEAPON, gi.soundindex ("weapons/trapdown.wav"), 1, ATTN_NORM, 0);
         gi.linkentity (trap);
     }
 
-    trap->timestamp = level.time + 30;
-
+    trap->timestamp = level.time + TRAP_DURATION;
+    trap->shell_expire_timestamp = 0;
 }
 #endif //XATRIX

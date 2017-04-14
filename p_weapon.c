@@ -28,6 +28,7 @@ static byte     is_silenced;
 
 #ifdef XATRIX
 static qboolean is_quadfire;
+static qboolean trapfired = qfalse;
 #endif //XATRIX
 
 static void weapon_grenade_fire(edict_t *ent, qboolean held);
@@ -119,6 +120,17 @@ void ChangeWeapon(edict_t *ent)
         }
     }
 
+#ifdef XATRIX
+    // Nick to stop primed trap exploding when dead (it gets dropped 'activated')
+    if (ent->client->trap_framenum)
+    {
+        ent->client->weapon_sound = 0;
+        ent->client->trap_framenum = 0;
+        trapfired = qfalse;
+    }
+    // End Nick
+#endif //XATRIX
+
     ent->client->lastweapon = ent->client->weapon;
     ent->client->weapon = ent->client->newweapon;
     ent->client->newweapon = NULL;
@@ -182,12 +194,14 @@ static void NoAmmoWeaponChange(edict_t *ent)
          ent->client->inventory[ITEM_PHALANX])
     {
         ent->client->newweapon = INDEX_ITEM(ITEM_PHALANX);
+        return; //Nick - 02/11/2005 - Missing?
     }
     // RAFAEL
     if ( ent->client->inventory[ITEM_CELLS] &&
          ent->client->inventory[ITEM_IONRIPPER])
     {
         ent->client->newweapon = INDEX_ITEM(ITEM_IONRIPPER);
+        return; //Nick - 02/11/2005 - Missing?
     }
 #endif //XATRIX
     if (ent->client->inventory[ITEM_CELLS]
@@ -228,7 +242,19 @@ Called by ClientBeginServerFrame and ClientThink
 void Think_Weapon(edict_t *ent)
 {
     // if just died, put the weapon away
-    if (ent->health < 1) {
+    if (ent->health <= 0) {
+
+#ifdef XATRIX
+        // Nick - hack to make trap go off if killed whilst it is 'primed'.
+        if ((ent->client->weapon && (strcmp (ent->client->weapon->pickup_name, "Trap") == 0)) &&
+            (ent->client->weaponstate == WEAPON_FIRING) && (trapfired == qfalse)) {
+
+            ent->client->trap_framenum = level.framenum + 5 * HZ; // This stops the fly away at 100mph trap
+            weapon_trap_fire (ent, qfalse);
+            ent->client->trap_framenum = 0;
+        }
+#endif //XATRIX
+
         ent->client->newweapon = NULL;
         ChangeWeapon(ent);
     }
@@ -1571,19 +1597,18 @@ TRAP
 
 #define TRAP_TIMER			5.0
 #define TRAP_MINSPEED		300
-#define TRAP_MAXSPEED		700
+#define TRAP_MAXSPEED		1400	// %%quadz: was: 700
 
 void weapon_trap_fire (edict_t *ent, qboolean held)
 {
     vec3_t	offset;
     vec3_t	forward, right;
     vec3_t	start;
-    int		damage = 125;
+    int		damage = TRAP_BASE_DAMAGE;
     float	timer;
     int		speed;
-    float	radius;
+    float	radius = TRAP_BASE_RADIUS;
 
-    radius = damage+40;
     if (is_quad)
         damage *= 4;
 
@@ -1672,7 +1697,15 @@ void Weapon_Trap (edict_t *ent)
             {
                 ent->client->weapon_sound = 0;
                 weapon_trap_fire (ent, qtrue);
+                trapfired = qtrue;
                 ent->client->trap_state = TRAP_BLEW_UP;
+
+                // Nick - if none left, and client still alive, change weapon!
+                if (ent->client->inventory[ent->client->ammo_index] == 0) {
+                    NoAmmoWeaponChange (ent);
+                    return;
+                }
+                // End Nick
             }
 
             if (ent->client->buttons & BUTTON_ATTACK)
@@ -1696,7 +1729,10 @@ void Weapon_Trap (edict_t *ent)
         {
             ent->client->weapon_sound = 0;
             weapon_trap_fire (ent, qfalse);
+            trapfired = qtrue;
             ent->client->trap_state = TRAP_THROWN;
+            if (ent->client->inventory[ent->client->ammo_index] == 0)
+                NoAmmoWeaponChange (ent);
         }
 
         if ((ent->client->weaponframe == 15) && (level.framenum < ent->client->trap_framenum))
@@ -1709,6 +1745,7 @@ void Weapon_Trap (edict_t *ent)
             ent->client->trap_framenum = 0;
             ent->client->trap_state = TRAP_NONE;
             ent->client->weaponstate = WEAPON_READY;
+            trapfired = qfalse;
         }
     }
 }
