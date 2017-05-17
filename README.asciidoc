@@ -42,7 +42,7 @@ sv_trap_expl_radius (default: 300)::
     The distance in which players take damage when a trap explodes
 
 sv_trap_held_damage (default: 125)::
-    The amount of damage which accurs when pushing attack button too long
+    The amount of damage which occurs when pushing attack button too long
 
 sv_trap_held_radius (default: 165)::
     The radius in which objects take damage from an exploding trap in a players hand (when pushing attack button too long)
