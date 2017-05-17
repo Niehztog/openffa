@@ -52,6 +52,14 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 #define GAMEVERSION "OpenFFA"
 #endif //XATRIX
 
+#ifndef OPENFFA_REVISION
+#define OPENFFA_REVISION "Unknown"
+#endif
+
+#ifndef OPENFFA_VERSION
+#define OPENFFA_VERSION "Unknown"
+#endif
+
 // protocol bytes that can be directly added to messages
 #define svc_muzzleflash     1
 #define svc_muzzleflash2    2
@@ -804,7 +812,7 @@ qboolean G_FloodProtect(edict_t *ent, struct flood_s *flood,
 //
 // g_items.c
 //
-#define ITEM_INDEX(x) ((x) - g_itemlist)
+#define ITEM_INDEX(x) (int)((x) - g_itemlist)
 #define INDEX_ITEM(x) ((gitem_t *)&g_itemlist[(x)])
 
 void PrecacheItem(gitem_t *it);

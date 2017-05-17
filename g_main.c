@@ -793,7 +793,7 @@ void G_ExitLevel(void)
         map->num_out += level.players_out;
     }
 
-    if (!level.nextmap || !strcmp(level.nextmap, level.mapname)) {
+    if (!level.nextmap[0] || !strcmp(level.nextmap, level.mapname)) {
         G_ResetLevel();
         return;
     }
@@ -1009,8 +1009,8 @@ static void G_Init(void)
     gi.cvar("time_remaining", "", CVAR_SERVERINFO);
     gi.cvar_set("time_remaining", "");
 
-    gi.cvar("revision", va("%d", OPENFFA_REVISION), CVAR_SERVERINFO);
-    gi.cvar_set("revision", va("%d", OPENFFA_REVISION));
+    gi.cvar("revision", va("%s", OPENFFA_REVISION), CVAR_SERVERINFO);
+    gi.cvar_set("revision", va("%s", OPENFFA_REVISION));
 
     g_select_empty = gi.cvar("g_select_empty", "0", CVAR_ARCHIVE);
     g_idle_time = gi.cvar("g_idle_time", "0", 0);

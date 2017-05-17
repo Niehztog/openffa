@@ -7,7 +7,7 @@ ifndef CPU
 endif
 
 ifndef REV
-    REV := $(shell git rev-list HEAD | wc -l)
+    REV := $(shell git rev-list HEAD | wc -l | xargs)
 endif
 
 ifndef VER
@@ -22,17 +22,23 @@ RM ?= rm -f
 CFLAGS ?= -O2 -fno-strict-aliasing -g -Wall -MMD $(INCLUDES)
 LDFLAGS ?= -shared
 LIBS ?=
+LIBTOOL = ldd
 
 ifdef CONFIG_WINDOWS
     LDFLAGS += -mconsole
     LDFLAGS += -Wl,--nxcompat,--dynamicbase
 else
+ifeq ($(shell uname), Darwin)
+	CFLAGS += -fPIC
+	LIBTOOL = otool
+else
     CFLAGS += -fPIC -fvisibility=hidden
-    LDFLAGS += -Wl,--no-undefined
+	LDFLAGS += -Wl,--no-undefined
+endif
 endif
 
-CFLAGS += -DOPENFFA_VERSION='"$(VER)"' -DOPENFFA_REVISION=$(REV)
-RCFLAGS += -DOPENFFA_VERSION='\"$(VER)\"' -DOPENFFA_REVISION=$(REV)
+CFLAGS += -DOPENFFA_VERSION='"$(VER)"' -DOPENFFA_REVISION='"$(REV)"'
+RCFLAGS += -DOPENFFA_VERSION='\"$(VER)\"' -DOPENFFA_REVISION='"$(REV)"'
 
 OBJS := g_bans.o g_chase.o g_cmds.o g_combat.o g_func.o g_items.o g_main.o \
 g_misc.o g_phys.o g_spawn.o g_svcmds.o g_target.o g_trigger.o g_utils.o \
@@ -86,6 +92,7 @@ endif
 $(TARGET): $(OBJS)
 	$(E) [LD] $@
 	$(Q)$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(LIBTOOL) -r $@
 
 clean:
 	$(E) [CLEAN]
